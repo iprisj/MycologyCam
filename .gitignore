@@ -1,6 +1,6 @@
+config.json
 screenshots/*
-!screenshots/.gitkeep 
-
+!screenshots/.gitkeep
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
