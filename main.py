@@ -5,20 +5,25 @@ import string
 import cv2
 import time, threading
 
+telegramId = 2128522398
+app = ApplicationBuilder().token("5778310826:AAEhVKOGVYvO2YfUH3KwS8fM0Kv2ukLZzzU").build()
+
 cam = cv2.VideoCapture(0)
-def screenshot():
+async def screenshot(sendToTelegram=False):
     if cam.isOpened():
         suc, content = cam.read()
         name = "screenshots/" + ''.join(random.choices(string.ascii_uppercase, k=8)) + ".png"
         cv2.imwrite(name, content)
+        if sendToTelegram:
+            await app.bot.send_photo(telegramId, open(name, "rb"))
         return suc, name
     else:
         return False
 
 async def upload_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message.from_user.id == 2128522398:
+    if not update.message.from_user.id == telegramId:
         return update.message.reply_text('Who are you bruv?')
-    res, frame = screenshot()
+    res, frame = await screenshot()
     if res:
         await update.message.reply_photo(open(frame, "rb"))
     else:
@@ -30,13 +35,12 @@ async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def whoami(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(update.message.from_user.id)
 
-app = ApplicationBuilder().token("5778310826:AAEhVKOGVYvO2YfUH3KwS8fM0Kv2ukLZzzU").build()
 app.add_handler(CommandHandler("hello", hello))
 app.add_handler(CommandHandler("screenshot", upload_image))
 app.add_handler(CommandHandler("whoami", whoami))
 app.run_polling()
 
-def periodically_take_screenshot():
-    screenshot()
+async def periodically_take_screenshot():
+    await screenshot(True)
     threading.Timer(60 * 60, periodically_take_screenshot).start()
 periodically_take_screenshot()
