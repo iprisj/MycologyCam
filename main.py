@@ -1,44 +1,58 @@
+from email import message
 import json
-import asyncio
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
 import random
 import string
 import cv2
-import time, threading
+import time
 
 
 config = json.load(open('config.json'))
 
 telegramId = config["telegramId"]
-app = ApplicationBuilder().token(config["token"]).build()
+app = Updater(config["token"])
+app.start_polling(poll_interval=0.1)
+dispatcher = app.dispatcher
 
 cam = cv2.VideoCapture(0)
-async def screenshot():
+def screenshot(sendTelegram:False):
     if cam.isOpened():
         suc, content = cam.read()
         name = "screenshots/" + ''.join(random.choices(string.ascii_uppercase, k=8)) + ".png"
         cv2.imwrite(name, content)
+        if sendTelegram:
+            app.bot.send_photo(config["updateTelegramId"], open(name, "rb"))
         return suc, name
     else:
         return False
 
-async def upload_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+def upload_image(update: Update, context: CallbackContext) -> None:
     if not update.message.from_user.id == telegramId:
         return update.message.reply_text('Who are you bruv?')
-    res, frame = await screenshot()
+    res, frame = screenshot(False)
     if res:
-        await update.message.reply_photo(open(frame, "rb"))
+        update.message.reply_photo(open(frame, "rb"))
     else:
-        await update.message.reply_text('Error getting Camera')
+        update.message.reply_text('Error getting Camera')
 
-async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(f'Hello {update.effective_user.first_name}')
+def eval_cmd(update: Update, context: CallbackContext) -> None:
+    if update.message.from_user.id == telegramId:
+        eval(' '.join(context.args))
 
-async def whoami(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(update.message.from_user.id)
 
-app.add_handler(CommandHandler("hello", hello))
-app.add_handler(CommandHandler("screenshot", upload_image))
-app.add_handler(CommandHandler("whoami", whoami))
-app.run_polling()
+
+dispatcher.add_handler(CommandHandler("screenshot", upload_image))
+dispatcher.add_handler(CommandHandler("eval", eval_cmd))
+
+dispatcher.add_handler(CommandHandler("hello", lambda update, context: 
+    update.message.reply_text(f'Hello {update.effective_user.first_name}')
+))
+dispatcher.add_handler(CommandHandler("whoami", lambda update, context: 
+    update.message.reply_text(update.message.from_user.id)
+))
+
+
+while True:
+    screenshot(True)
+    time.sleep(60 * 60)
