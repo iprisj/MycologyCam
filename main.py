@@ -1,3 +1,4 @@
+#! /usr/bin/python3
 from email import message
 import json
 from telegram import Update
@@ -15,17 +16,20 @@ app = Updater(config["token"])
 app.start_polling(poll_interval=0.1)
 dispatcher = app.dispatcher
 
-cam = cv2.VideoCapture(0)
+cam = cv2.VideoCapture(config["cameraIndex"])
+
+
 def screenshot(sendTelegram:False):
     if cam.isOpened():
         suc, content = cam.read()
         name = "screenshots/" + ''.join(random.choices(string.ascii_uppercase, k=8)) + ".png"
+        print(name)
         cv2.imwrite(name, content)
         if sendTelegram:
             app.bot.send_photo(config["updateTelegramId"], open(name, "rb"))
         return suc, name
     else:
-        return False
+        return False, False
 
 def upload_image(update: Update, context: CallbackContext) -> None:
     if not update.message.from_user.id == telegramId:
@@ -53,6 +57,6 @@ dispatcher.add_handler(CommandHandler("whoami", lambda update, context:
 ))
 
 
-while True:
+while False:
     screenshot(True)
     time.sleep(60 * 60)
