@@ -16,12 +16,11 @@ app = Updater(config["token"])
 app.start_polling(poll_interval=0.1)
 dispatcher = app.dispatcher
 
-cam = cv2.VideoCapture(config["cameraIndex"])
-
-
 def screenshot(sendTelegram:False):
+    cam = cv2.VideoCapture(config["cameraIndex"])
     if cam.isOpened():
         suc, content = cam.read()
+        cam.release()
         name = "screenshots/" + ''.join(random.choices(string.ascii_uppercase, k=8)) + ".png"
         print(name)
         cv2.imwrite(name, content)
@@ -57,6 +56,6 @@ dispatcher.add_handler(CommandHandler("whoami", lambda update, context:
 ))
 
 
-while False:
+while True:
     screenshot(True)
     time.sleep(60 * 60)
